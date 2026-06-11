@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monitor IoT — Laboratorio Universidad Tecnológica</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #21262d;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-orange: #f0883e;
+      --accent-red: #f85149;
+      --accent-purple: #bc8cff;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --card: #1c2128;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo svg { width: 32px; height: 32px; }
+    .logo h1 { font-size: 1.1rem; font-weight: 600; }
+    .logo span { font-size: 0.75rem; color: var(--muted); display: block; font-weight: 400; }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #clock { font-family: 'Share Tech Mono', monospace; color: var(--text); font-size: 0.85rem; }
+
+    /* LAYOUT */
+    main { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ESTADO GENERAL */
+    .estado-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .estado-info { display: flex; align-items: center; gap: 14px; }
+    .estado-badge {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .badge-ok { background: rgba(63,185,80,0.15); color: var(--accent-green); border: 1px solid rgba(63,185,80,0.3); }
+    .badge-warn { background: rgba(240,136,62,0.15); color: var(--accent-orange); border: 1px solid rgba(240,136,62,0.3); }
+    .badge-alert { background: rgba(248,81,73,0.15); color: var(--accent-red); border: 1px solid rgba(248,81,73,0.3); }
+    .estado-label { font-size: 1rem; font-weight: 600; }
+    .estado-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .btn-refresh {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+    .btn-refresh:hover { background: var(--border); }
+
+    /* SENSOR GRID */
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .sensor-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .sensor-card:hover { border-color: var(--accent-blue); }
+    .sensor-card .accent-line {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+    }
+    .sensor-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+    .sensor-name { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .sensor-icon { font-size: 1.3rem; }
+    .sensor-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 2.6rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .sensor-unit { font-size: 1.1rem; color: var(--muted); margin-left: 4px; }
+    .sensor-sub { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+    .sensor-bar-bg {
+      background: var(--border);
+      border-radius: 4px;
+      height: 5px;
+      margin-top: 14px;
+      overflow: hidden;
+    }
+    .sensor-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    /* HISTORIAL */
+    .history-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 28px;
+    }
+    .history-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; }
+    canvas { width: 100% !important; }
+
+    /* TABLA EVENTOS */
+    .events-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+    }
+    .events-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .tag { padding: 2px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; }
+    .tag-ok { background: rgba(63,185,80,0.15); color: var(--accent-green); }
+    .tag-warn { background: rgba(240,136,62,0.15); color: var(--accent-orange); }
+    .tag-alert { background: rgba(248,81,73,0.15); color: var(--accent-red); }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 16px; }
+      header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+      .sensor-value { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="#161b22"/>
+      <circle cx="16" cy="16" r="6" stroke="#58a6ff" stroke-width="2"/>
+      <circle cx="16" cy="16" r="2" fill="#58a6ff"/>
+      <line x1="16" y1="4" x2="16" y2="10" stroke="#58a6ff" stroke-width="1.5"/>
+      <line x1="16" y1="22" x2="16" y2="28" stroke="#58a6ff" stroke-width="1.5"/>
+      <line x1="4" y1="16" x2="10" y2="16" stroke="#58a6ff" stroke-width="1.5"/>
+      <line x1="22" y1="16" x2="28" y2="16" stroke="#58a6ff" stroke-width="1.5"/>
+    </svg>
+    <div>
+      <h1>IoT Monitor</h1>
+      <span>Universidad Tecnológica — Laboratorio</span>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="dot"></div>
+    <span>En línea</span>
+    <span style="margin: 0 8px;">|</span>
+    <span id="clock">--:--:--</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ESTADO GENERAL -->
+  <p class="section-title">Estado General</p>
+  <div class="estado-card">
+    <div class="estado-info">
+      <span id="estado-badge" class="estado-badge badge-ok">✓ Normal</span>
+      <div>
+        <div class="estado-label" id="estado-label">Laboratorio operando correctamente</div>
+        <div class="estado-sub" id="estado-sub">Última actualización: <span id="last-update">--</span></div>
+      </div>
+    </div>
+    <button class="btn-refresh" onclick="actualizarDatos()">↻ Actualizar</button>
+  </div>
+
+  <!-- SENSORES -->
+  <p class="section-title">Sensores en Tiempo Real</p>
+  <div class="sensor-grid">
+
+    <!-- Temperatura -->
+    <div class="sensor-card">
+      <div class="accent-line" style="background: var(--accent-orange);"></div>
+      <div class="sensor-header">
+        <span class="sensor-name">Temperatura</span>
+        <span class="sensor-icon">🌡️</span>
+      </div>
+      <div>
+        <span class="sensor-value" id="temp-val" style="color: var(--accent-orange);">--</span>
+        <span class="sensor-unit" style="color: var(--accent-orange);">°C</span>
+      </div>
+      <div class="sensor-sub" id="temp-estado">Cargando...</div>
+      <div class="sensor-bar-bg">
+        <div class="sensor-bar-fill" id="temp-bar" style="background: var(--accent-orange); width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- Humedad -->
+    <div class="sensor-card">
+      <div class="accent-line" style="background: var(--accent-blue);"></div>
+      <div class="sensor-header">
+        <span class="sensor-name">Humedad</span>
+        <span class="sensor-icon">💧</span>
+      </div>
+      <div>
+        <span class="sensor-value" id="hum-val" style="color: var(--accent-blue);">--</span>
+        <span class="sensor-unit" style="color: var(--accent-blue);">%</span>
+      </div>
+      <div class="sensor-sub" id="hum-estado">Cargando...</div>
+      <div class="sensor-bar-bg">
+        <div class="sensor-bar-fill" id="hum-bar" style="background: var(--accent-blue); width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- Calidad del Aire -->
+    <div class="sensor-card">
+      <div class="accent-line" style="background: var(--accent-green);"></div>
+      <div class="sensor-header">
+        <span class="sensor-name">Calidad del Aire</span>
+        <span class="sensor-icon">🌬️</span>
+      </div>
+      <div>
+        <span class="sensor-value" id="aire-val" style="color: var(--accent-green);">--</span>
+        <span class="sensor-unit" style="color: var(--accent-green);">AQI</span>
+      </div>
+      <div class="sensor-sub" id="aire-estado">Cargando...</div>
+      <div class="sensor-bar-bg">
+        <div class="sensor-bar-fill" id="aire-bar" style="background: var(--accent-green); width:0%;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="history-card">
+    <div class="history-title">📈 Historial — Últimas 10 lecturas</div>
+    <canvas id="chart" height="90"></canvas>
+  </div>
+
+  <!-- EVENTOS -->
+  <div class="events-card">
+    <div class="events-title">📋 Registro de Eventos</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Hora</th>
+          <th>Sensor</th>
+          <th>Valor</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="events-body">
+        <tr><td colspan="4" style="color:var(--muted); text-align:center; padding:20px;">Actualizando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>
+  Dashboard IoT — Administración de Proyectos de TI · Universidad Tecnológica
+</footer>
+
+<!-- Chart.js desde CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  // ---- RELOJ ----
+  function actualizarReloj() {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('es-MX');
+  }
+  setInterval(actualizarReloj, 1000);
+  actualizarReloj();
+
+  // ---- HISTORIAL ----
+  const histTemp = [];
+  const histHum  = [];
+  const histAire = [];
+  const histLabels = [];
+
+  // ---- CHART ----
+  const ctx = document.getElementById('chart').getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: histLabels,
+      datasets: [
+        { label: 'Temperatura (°C)', data: histTemp, borderColor: '#f0883e', backgroundColor: 'rgba(240,136,62,0.08)', tension: 0.4, pointRadius: 3 },
+        { label: 'Humedad (%)',       data: histHum,  borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.08)', tension: 0.4, pointRadius: 3 },
+        { label: 'AQI',               data: histAire, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.08)',  tension: 0.4, pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: { family: 'Inter', size: 11 } } }
+      },
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } }
+      }
+    }
+  });
+
+  // ---- GENERADOR DE DATOS SIMULADOS ----
+  function simular() {
+    return {
+      temp: +(20 + Math.random() * 15).toFixed(1),
+      hum:  +(40 + Math.random() * 40).toFixed(1),
+      aire: Math.floor(20 + Math.random() * 130),
+    };
+  }
+
+  function estadoTemp(v) {
+    if (v < 18) return { txt: 'Temperatura baja', clase: 'warn' };
+    if (v > 30) return { txt: 'Temperatura alta — revisar ventilación', clase: 'alert' };
+    return { txt: 'Rango óptimo (18 – 30 °C)', clase: 'ok' };
+  }
+  function estadoHum(v) {
+    if (v < 40) return { txt: 'Humedad baja', clase: 'warn' };
+    if (v > 70) return { txt: 'Humedad alta', clase: 'alert' };
+    return { txt: 'Rango óptimo (40 – 70 %)', clase: 'ok' };
+  }
+  function estadoAire(v) {
+    if (v <= 50)  return { txt: 'Buena calidad (AQI ≤ 50)', clase: 'ok' };
+    if (v <= 100) return { txt: 'Moderada (AQI 51 – 100)', clase: 'warn' };
+    return { txt: 'Calidad deficiente — ventilar', clase: 'alert' };
+  }
+
+  const colorMap = { ok: 'var(--accent-green)', warn: 'var(--accent-orange)', alert: 'var(--accent-red)' };
+  const badgeMap = { ok: 'badge-ok', warn: 'badge-warn', alert: 'badge-alert' };
+  const badgeTxt = { ok: '✓ Normal', warn: '⚠ Atención', alert: '✕ Alerta' };
+  const labelTxt = {
+    ok:   'Laboratorio operando correctamente',
+    warn: 'Se detectaron condiciones fuera de rango',
+    alert:'Condición crítica — se requiere acción'
+  };
+
+  const eventos = [];
+
+  function actualizarDatos() {
+    const d = simular();
+    const eT = estadoTemp(d.temp);
+    const eH = estadoHum(d.hum);
+    const eA = estadoAire(d.aire);
+
+    // Actualizar tarjetas
+    document.getElementById('temp-val').textContent = d.temp;
+    document.getElementById('temp-estado').textContent = eT.txt;
+    document.getElementById('temp-bar').style.width = Math.min(d.temp / 50 * 100, 100) + '%';
+
+    document.getElementById('hum-val').textContent = d.hum;
+    document.getElementById('hum-estado').textContent = eH.txt;
+    document.getElementById('hum-bar').style.width = d.hum + '%';
+
+    document.getElementById('aire-val').textContent = d.aire;
+    document.getElementById('aire-estado').textContent = eA.txt;
+    document.getElementById('aire-bar').style.width = Math.min(d.aire / 200 * 100, 100) + '%';
+
+    // Estado general (el peor)
+    const priority = { ok:0, warn:1, alert:2 };
+    const peor = [eT.clase, eH.clase, eA.clase].reduce((a,b) => priority[a] >= priority[b] ? a : b);
+    const badge = document.getElementById('estado-badge');
+    badge.className = 'estado-badge ' + badgeMap[peor];
+    badge.textContent = badgeTxt[peor];
+    document.getElementById('estado-label').textContent = labelTxt[peor];
+
+    // Hora
+    const now = new Date();
+    const hora = now.toLocaleTimeString('es-MX');
+    document.getElementById('last-update').textContent = hora;
+
+    // Historial del chart (máx 10)
+    histLabels.push(hora);
+    histTemp.push(d.temp);
+    histHum.push(d.hum);
+    histAire.push(d.aire);
+    if (histLabels.length > 10) { histLabels.shift(); histTemp.shift(); histHum.shift(); histAire.shift(); }
+    chart.update();
+
+    // Eventos
+    const sensores = [
+      { nombre: 'Temperatura', valor: d.temp + ' °C', clase: eT.clase },
+      { nombre: 'Humedad',     valor: d.hum  + ' %',  clase: eH.clase },
+      { nombre: 'Calidad Aire',valor: d.aire + ' AQI',clase: eA.clase },
+    ];
+    sensores.forEach(s => {
+      eventos.unshift({ hora, sensor: s.nombre, valor: s.valor, clase: s.clase });
+    });
+    if (eventos.length > 15) eventos.length = 15;
+
+    const tbody = document.getElementById('events-body');
+    tbody.innerHTML = eventos.map(e => `
+      <tr>
+        <td style="color:var(--muted); font-family:'Share Tech Mono',monospace;">${e.hora}</td>
+        <td>${e.sensor}</td>
+        <td style="font-family:'Share Tech Mono',monospace;">${e.valor}</td>
+        <td><span class="tag tag-${e.clase}">${e.clase === 'ok' ? 'Normal' : e.clase === 'warn' ? 'Atención' : 'Alerta'}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  // Primera lectura y luego cada 4 segundos
+  actualizarDatos();
+  setInterval(actualizarDatos, 4000);
+</script>
+</body>
+</html>
